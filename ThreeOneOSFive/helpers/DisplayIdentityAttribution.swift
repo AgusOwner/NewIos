@@ -122,11 +122,7 @@ struct DisplayAttributionSheet: View {
                     HStack(spacing: 14) {
                         AppLogo(size: 44)
                         VStack(alignment: .leading, spacing: 3) {
-<<<<<<< HEAD
-                            Text("Fox Rank")
-=======
-                            Text("FoxRank")
->>>>>>> feb4836bbe5445dc35d8c914ef6182c9e0f082c5
+                            Text("Argent")
                                 .font(.headline)
                             Text(language.text("attribution.subtitle"))
                                 .font(.subheadline)

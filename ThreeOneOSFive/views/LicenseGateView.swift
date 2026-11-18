@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Guarda localmente si la key ya fue validada, para no pedirla en cada apertura.
 enum LicenseStore {
-    private static let key = "foxrank.license.validated"
+    private static let key = "argent.license.validated"
 
     static var isValidated: Bool {
         get { UserDefaults.standard.bool(forKey: key) }
@@ -26,17 +26,13 @@ struct LicenseGateView: View {
             AppTheme.pageBackground.ignoresSafeArea()
 
             VStack(spacing: 20) {
-                Image("FoxRankLogo")
+                Image("ArgentLogo")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 140, height: 140)
                     .padding(.bottom, 8)
 
-<<<<<<< HEAD
-                Text("Fox Rank")
-=======
-                Text("FoxRank")
->>>>>>> feb4836bbe5445dc35d8c914ef6182c9e0f082c5
+                Text("Argent")
                     .font(.largeTitle.bold())
                     .foregroundStyle(.white)
 

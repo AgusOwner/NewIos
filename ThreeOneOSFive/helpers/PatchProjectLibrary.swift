@@ -37,18 +37,6 @@ struct PatchPasswordRequest: Identifiable {
 enum PatchProjectLibrary {
     private static let authorCopiesDirectoryName = ".AuthorCopies"
     private static let originsDirectoryName = ".Origins"
-    /// Paquetes sembrados desde BundledPatches/ en el bundle de la app.
-    /// Es un marcador separado de ".AuthorCopies": un paquete sembrado sí
-    /// debe comportarse como author copy (se puede inspeccionar aunque sea
-    /// privado), pero NO debe "ocupar" su target solo por estar instalado,
-    /// o bloquearía cualquier importación manual de un paquete propio que
-    /// toque el mismo archivo. La colisión real (dos parches APLICADOS al
-    /// mismo archivo) se sigue controlando aparte en PatchTransaction.
-    private static let seededDirectoryName = ".Seeded"
-    /// Paquetes sembrados que el usuario borró explícitamente desde la app.
-    /// BundledPatchSeeder revisa esto antes de reinstalar, para no revivir
-    /// en el próximo arranque algo que el usuario sacó a propósito.
-    private static let removedByUserDirectoryName = ".RemovedByUser"
 
     static func packageRootURL(fileManager: FileManager = .default) throws -> URL {
         let base = try fileManager.url(
@@ -189,67 +177,13 @@ enum PatchProjectLibrary {
         )
     }
 
-    /// Marca un paquete como sembrado desde BundledPatches/. Usado por
-    /// BundledPatchSeeder; no llamar para paquetes creados o importados
-    /// manualmente por el usuario.
-    static func markAsSeeded(
-        packageID: UUID,
-        fileManager: FileManager = .default
-    ) throws {
-        let root = try seededRootURL(fileManager: fileManager)
-        try Data().write(
-            to: root.appendingPathComponent(packageID.uuidString),
-            options: [.atomic, .completeFileProtection]
-        )
-    }
-
-    static func isSeeded(
-        packageID: UUID,
-        fileManager: FileManager = .default
-    ) -> Bool {
-        guard let root = try? seededRootURL(fileManager: fileManager) else {
-            return false
-        }
-        return fileManager.fileExists(
-            atPath: root.appendingPathComponent(packageID.uuidString).path
-        )
-    }
-
-    /// Marca un packageID como "el usuario lo borró a propósito". Solo
-    /// aplica a paquetes que eran .Seeded; BundledPatchSeeder lo consulta
-    /// antes de reinstalar un paquete del bundle.
-    static func markAsRemovedByUser(
-        packageID: UUID,
-        fileManager: FileManager = .default
-    ) throws {
-        let root = try removedByUserRootURL(fileManager: fileManager)
-        try Data().write(
-            to: root.appendingPathComponent(packageID.uuidString),
-            options: [.atomic, .completeFileProtection]
-        )
-    }
-
-    static func isRemovedByUser(
-        packageID: UUID,
-        fileManager: FileManager = .default
-    ) -> Bool {
-        guard let root = try? removedByUserRootURL(fileManager: fileManager) else {
-            return false
-        }
-        return fileManager.fileExists(
-            atPath: root.appendingPathComponent(packageID.uuidString).path
-        )
-    }
-
     static func overlappingTargetPath(
         in project: PatchProject,
         excludingPackageID: UUID,
         fileManager: FileManager = .default
     ) -> String? {
         var occupied = Set<String>()
-        for item in load(fileManager: fileManager)
-        where item.id != excludingPackageID
-            && !isSeeded(packageID: item.id, fileManager: fileManager) {
+        for item in load(fileManager: fileManager) where item.id != excludingPackageID {
             guard let other = item.project else { continue }
             for rule in other.rules {
                 occupied.insert(rule.bundleID + "\0" + rule.relativePath)
@@ -354,7 +288,6 @@ enum PatchProjectLibrary {
         ) == nil else {
             throw PatchPackageError.activePatchCannotBeDeleted
         }
-        let wasSeeded = isSeeded(packageID: item.id, fileManager: fileManager)
         if fileManager.fileExists(atPath: item.packageURL.path) {
             try fileManager.removeItem(at: item.packageURL)
         }
@@ -371,15 +304,6 @@ enum PatchProjectLibrary {
             fileManager: fileManager
         ), fileManager.fileExists(atPath: marker.path) {
             try? fileManager.removeItem(at: marker)
-        }
-        if let seededRoot = try? seededRootURL(fileManager: fileManager) {
-            let marker = seededRoot.appendingPathComponent(item.id.uuidString)
-            if fileManager.fileExists(atPath: marker.path) {
-                try? fileManager.removeItem(at: marker)
-            }
-        }
-        if wasSeeded {
-            try? markAsRemovedByUser(packageID: item.id, fileManager: fileManager)
         }
     }
 
@@ -442,24 +366,6 @@ enum PatchProjectLibrary {
     ) throws -> URL {
         try authorCopiesRootURL(fileManager: fileManager)
             .appendingPathComponent(packageID.uuidString)
-    }
-
-    private static func seededRootURL(
-        fileManager: FileManager
-    ) throws -> URL {
-        let root = try packageRootURL(fileManager: fileManager)
-            .appendingPathComponent(seededDirectoryName, isDirectory: true)
-        try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
-        return root
-    }
-
-    private static func removedByUserRootURL(
-        fileManager: FileManager
-    ) throws -> URL {
-        let root = try packageRootURL(fileManager: fileManager)
-            .appendingPathComponent(removedByUserDirectoryName, isDirectory: true)
-        try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
-        return root
     }
 
     private static func originsRootURL(fileManager: FileManager) throws -> URL {

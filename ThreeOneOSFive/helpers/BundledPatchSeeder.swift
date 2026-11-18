@@ -40,15 +40,6 @@ enum BundledPatchSeeder {
                 continue
             }
 
-            // El archivo no está (o cambió de tamaño). Antes de reinstalarlo,
-            // nos fijamos si el usuario lo borró a propósito desde la app;
-            // si es así, respetamos esa decisión y no lo revivimos.
-            if let packageID = packageID(of: source),
-               PatchProjectLibrary.isRemovedByUser(packageID: packageID) {
-                log("seeder: skipping \(name) — removed by user previously")
-                continue
-            }
-
             do {
                 if FileManager.default.fileExists(atPath: destination.path) {
                     try FileManager.default.removeItem(at: destination)
@@ -68,20 +59,10 @@ enum BundledPatchSeeder {
         return installed
     }
 
-    private static func packageID(of url: URL) -> UUID? {
-        guard let data = try? Data(contentsOf: url, options: .mappedIfSafe),
-              let summary = try? PatchPackageCodec.inspect(data) else { return nil }
-        return summary.packageID
-    }
-
     private static func markAsAuthorCopyIfPossible(_ url: URL) {
         guard let data = try? Data(contentsOf: url, options: .mappedIfSafe),
               let summary = try? PatchPackageCodec.inspect(data) else { return }
         try? PatchProjectLibrary.markAsAuthorCopy(packageID: summary.packageID)
-        // Distinto del marcador anterior: evita que este paquete por defecto
-        // bloquee la importación manual de parches propios que toquen el
-        // mismo archivo (ver overlappingTargetPath en PatchProjectLibrary).
-        try? PatchProjectLibrary.markAsSeeded(packageID: summary.packageID)
     }
 
     private static func bundledPackages() -> [URL] {

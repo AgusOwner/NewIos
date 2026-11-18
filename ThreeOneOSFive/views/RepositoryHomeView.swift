@@ -32,11 +32,7 @@ struct RepositoryHomeView: View {
                 await store.refreshAllAndWait()
                 rebuildFeed()
             }
-<<<<<<< HEAD
-            .navigationTitle("Fox Rank")
-=======
-            .navigationTitle("FoxRank")
->>>>>>> feb4836bbe5445dc35d8c914ef6182c9e0f082c5
+            .navigationTitle("Argent")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 AppUtilityToolbar(
